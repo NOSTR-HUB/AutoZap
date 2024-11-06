@@ -1,6 +1,6 @@
 import logging
-from config import PAYMENT_AMOUNT
-from ..ln_wallet.wallet import send_payment
+from backend.config import PAYMENT_AMOUNT
+from backend.ln_wallet.wallet import send_payment
 
 # Process payment with budget check
 def process_payment(npub):
