@@ -1,2 +1,9 @@
 .env
-.env
+
+# Ignore Python cache files
+__pycache__/
+*.pyc
+
+# Ignore temporary and backup files
+*.save
+
