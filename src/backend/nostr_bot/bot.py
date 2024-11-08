@@ -1,7 +1,7 @@
 import logging
 import time
 from nostr.relay_manager import RelayManager
-from backend.config import NOSTR_PRIVATE_KEY, NOSTR_RELAY_URLS
+from backend.config import NOSTR_RELAY_URLS
 from src.backend.nostr_bot.events import subscribe_to_reposts
 from src.backend.nostr_bot.transactions import process_payment
 
