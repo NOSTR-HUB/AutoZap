@@ -20,7 +20,7 @@ AutoZap is a bot for the Nostr network designed to monitor reposts of specific n
 1. **Clone the repository:**
 
    ```bash
-   git clone https://github.com/your-username/AutoZap.git
+   git clone https://github.com/NOSTR-HUB/AutoZap.git
    cd AutoZap
    ```
 
@@ -49,7 +49,6 @@ AutoZap is a bot for the Nostr network designed to monitor reposts of specific n
 
    - `LNBITS_API_KEY`: Your LNbits API key.
    - `LNBITS_URL`: Your LNbits instance URL for creating invoices.
-   - `NOSTR_PRIVATE_KEY`: Your private key for Nostr.
    - `NOSTR_RELAY_URLS`: Comma-separated list of Nostr relay URLs.
    - `PAYMENT_AMOUNT`: The amount in satoshis to send for each qualifying repost.
 
