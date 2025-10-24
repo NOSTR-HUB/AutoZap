@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  autozap:
+    build: .
+    volumes:
+      - ./data:/app/data
+    environment:
+      - LNBITS_API_KEY=${LNBITS_API_KEY}
+      - LNBITS_URL=${LNBITS_URL}
+      - NOSTR_RELAY_URLS=${NOSTR_RELAY_URLS}
+      - PAYMENT_AMOUNT=${PAYMENT_AMOUNT:-1000}
+      - RATE_LIMIT_HOURS=${RATE_LIMIT_HOURS:-24}
+      - DB_PATH=/app/data/payments.db
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    restart: unless-stopped
