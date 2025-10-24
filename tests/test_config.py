@@ -2,11 +2,11 @@
 
 import os
 import pytest
-from backend.config import validate_config, Config
+from src.backend.config import validate_config, Config
 
-def test_valid_config(monkeypatch):
-    """Test configuration validation with valid inputs."""
-    # Set up test environment variables
+@pytest.fixture
+def mock_env(monkeypatch):
+    """Set up test environment variables."""
     env_vars = {
         "LNBITS_API_KEY": "test_key",
         "LNBITS_URL": "https://test.lnbits.com",
@@ -18,11 +18,14 @@ def test_valid_config(monkeypatch):
     
     for key, value in env_vars.items():
         monkeypatch.setenv(key, value)
-    
+    return env_vars
+
+def test_valid_config(mock_env):
+    """Test configuration validation with valid inputs."""
     config = validate_config()
     assert isinstance(config, Config)
-    assert config.lnbits_api_key == "test_key"
-    assert config.lnbits_url == "https://test.lnbits.com"
+    assert config.lnbits_api_key == mock_env["LNBITS_API_KEY"]
+    assert config.lnbits_url == mock_env["LNBITS_URL"]
     assert len(config.nostr_relay_urls) == 2
     assert config.payment_amount == 1000
     assert config.rate_limit_hours == 24

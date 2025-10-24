@@ -1,0 +1,10 @@
+README.md
+setup.py
+autozap.egg-info/PKG-INFO
+autozap.egg-info/SOURCES.txt
+autozap.egg-info/dependency_links.txt
+autozap.egg-info/requires.txt
+autozap.egg-info/top_level.txt
+tests/test_config.py
+tests/test_db.py
+tests/test_wallet.py

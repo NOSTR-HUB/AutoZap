@@ -1,13 +1,18 @@
 """Test payment database operations."""
 
 import pytest
+import sqlite3
 from datetime import datetime, timedelta
-from backend.db.models import Database, Payment
+from src.backend.db.models import Database, Payment
 
 @pytest.fixture
 def test_db():
     """Create a test database instance."""
-    return Database(":memory:")  # Use in-memory SQLite for testing
+    conn = sqlite3.connect(":memory:")
+    db = Database(":memory:")
+    db.connection = conn  # Keep the connection persistent for in-memory database
+    db._create_tables(conn)
+    return db
 
 def test_add_payment(test_db):
     """Test adding a payment record."""
@@ -26,6 +31,8 @@ def test_add_payment(test_db):
 
 def test_has_recent_payment(test_db):
     """Test checking for recent payments."""
+    from datetime import datetime
+    
     # Add a test payment
     payment = Payment(
         id=None,
@@ -33,7 +40,7 @@ def test_has_recent_payment(test_db):
         amount=1000,
         bolt11="test_bolt11",
         status="paid",
-        created_at=None,
+        created_at=datetime.now(),
         note_id="test_note"
     )
     test_db.add_payment(payment)
@@ -44,11 +51,14 @@ def test_has_recent_payment(test_db):
 
 def test_get_payment_history(test_db):
     """Test retrieving payment history."""
+    from datetime import datetime
+    
+    now = datetime.now()
     # Add multiple test payments
     payments = [
-        Payment(None, "npub1", 1000, "bolt11_1", "paid", None, "note1"),
-        Payment(None, "npub1", 2000, "bolt11_2", "paid", None, "note2"),
-        Payment(None, "npub2", 1500, "bolt11_3", "paid", None, "note1")
+        Payment(None, "npub1", 1000, "bolt11_1", "paid", now, "note1"),
+        Payment(None, "npub1", 2000, "bolt11_2", "paid", now, "note2"),
+        Payment(None, "npub2", 1500, "bolt11_3", "paid", now, "note1")
     ]
     
     for payment in payments:

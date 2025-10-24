@@ -82,5 +82,15 @@ def validate_config() -> Config:
         db_path=db_path
     )
 
-# Initialize configuration
-config = validate_config()
+# Initialize configuration lazily
+config = None
+
+def init_config():
+    """Initialize the configuration."""
+    global config
+    try:
+        config = validate_config()
+        logger.info("Configuration loaded successfully")
+    except ValueError as e:
+        logger.error(f"Configuration error: {e}")
+        raise

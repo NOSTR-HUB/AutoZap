@@ -2,19 +2,32 @@
 
 import pytest
 import responses
-from backend.ln_wallet.wallet import create_invoice, InvoiceGenerationError
+from src.backend.ln_wallet.wallet import create_invoice, InvoiceGenerationError
 
-@pytest.fixture
+@pytest.fixture(autouse=True)
 def mock_config(monkeypatch):
     """Set up test configuration."""
+    # Clear any existing config
+    import src.backend.config
+    from src.backend.ln_wallet.wallet import set_config_for_testing
+    src.backend.config.config = None
+
     env_vars = {
         "LNBITS_API_KEY": "test_key",
         "LNBITS_URL": "https://test.lnbits.com",
-        "PAYMENT_AMOUNT": "1000"
+        "NOSTR_RELAY_URLS": "wss://relay1.com",
+        "PAYMENT_AMOUNT": "1000",
+        "RATE_LIMIT_HOURS": "24",
+        "DB_PATH": ":memory:"
     }
     
     for key, value in env_vars.items():
         monkeypatch.setenv(key, value)
+    
+    from src.backend.config import validate_config, init_config
+    config = validate_config()
+    set_config_for_testing(config)
+    return config
 
 @responses.activate
 def test_create_invoice_success(mock_config):
@@ -22,7 +35,7 @@ def test_create_invoice_success(mock_config):
     # Mock LNbits API response
     responses.add(
         responses.POST,
-        "https://test.lnbits.com/api/v1/payments",
+        f"{mock_config.lnbits_url}/api/v1/payments",
         json={
             "payment_request": "test_bolt11",
             "payment_hash": "test_hash"
@@ -42,7 +55,7 @@ def test_create_invoice_failure(mock_config):
     # Mock LNbits API error response
     responses.add(
         responses.POST,
-        "https://test.lnbits.com/api/v1/payments",
+        f"{mock_config.lnbits_url}/api/v1/payments",
         json={"error": "Failed to generate invoice"},
         status=400
     )
@@ -56,7 +69,7 @@ def test_create_invoice_network_error(mock_config):
     # Mock network timeout
     responses.add(
         responses.POST,
-        "https://test.lnbits.com/api/v1/payments",
+        f"{mock_config.lnbits_url}/api/v1/payments",
         body=responses.ConnectionError("Connection timeout")
     )
     

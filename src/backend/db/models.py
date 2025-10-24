@@ -26,11 +26,17 @@ class Database:
             db_path: Path to the SQLite database file
         """
         self.db_path = db_path
-        self._create_tables()
-    
-    def _create_tables(self):
-        """Create necessary database tables if they don't exist."""
+        self.connection = None  # For persistent connections in tests
         conn = sqlite3.connect(self.db_path)
+        self._create_tables(conn)
+        conn.close()
+    
+    def _create_tables(self, conn: sqlite3.Connection):
+        """Create necessary database tables if they don't exist.
+        
+        Args:
+            conn: SQLite database connection
+        """
         cursor = conn.cursor()
         
         cursor.execute("""
@@ -46,7 +52,6 @@ class Database:
         """)
         
         conn.commit()
-        conn.close()
     
     def add_payment(self, payment: Payment) -> int:
         """Add a new payment record to the database.
@@ -57,19 +62,24 @@ class Database:
         Returns:
             The ID of the inserted payment record
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
-        cursor.execute("""
-        INSERT INTO payments (npub, amount, bolt11, status, note_id)
-        VALUES (?, ?, ?, ?, ?)
-        """, (payment.npub, payment.amount, payment.bolt11, payment.status, payment.note_id))
-        
-        payment_id = cursor.lastrowid
-        conn.commit()
-        conn.close()
-        
-        return payment_id
+        conn = self.connection or sqlite3.connect(self.db_path)
+        try:
+            cursor = conn.cursor()
+            if not self.connection:
+                self._create_tables(conn)  # Ensure tables exist
+            
+            created_at = payment.created_at or datetime.now()
+            cursor.execute("""
+            INSERT INTO payments (npub, amount, bolt11, status, note_id, created_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """, (payment.npub, payment.amount, payment.bolt11, payment.status, payment.note_id, created_at))
+            
+            payment_id = cursor.lastrowid
+            conn.commit()
+            return payment_id
+        finally:
+            if not self.connection:
+                conn.close()
     
     def has_recent_payment(self, npub: str, note_id: str, hours: int = 24) -> bool:
         """Check if a user has received a payment for a specific note in the recent past.
@@ -82,20 +92,24 @@ class Database:
         Returns:
             True if a recent payment exists, False otherwise
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
-        cursor.execute("""
-        SELECT COUNT(*) FROM payments 
-        WHERE npub = ? AND note_id = ? 
-        AND created_at >= datetime('now', '-' || ? || ' hours')
-        AND status = 'paid'
-        """, (npub, note_id, hours))
-        
-        count = cursor.fetchone()[0]
-        conn.close()
-        
-        return count > 0
+        conn = self.connection or sqlite3.connect(self.db_path)
+        try:
+            cursor = conn.cursor()
+            if not self.connection:
+                self._create_tables(conn)  # Ensure tables exist
+            
+            cursor.execute("""
+            SELECT COUNT(*) FROM payments 
+            WHERE npub = ? AND note_id = ? 
+            AND created_at >= datetime('now', '-' || ? || ' hours')
+            AND status = 'paid'
+            """, (npub, note_id, hours))
+            
+            count = cursor.fetchone()[0]
+            return count > 0
+        finally:
+            if not self.connection:
+                conn.close()
     
     def get_payment_history(self, npub: Optional[str] = None) -> list[Payment]:
         """Get payment history, optionally filtered by user.
@@ -106,32 +120,37 @@ class Database:
         Returns:
             List of Payment objects representing the payment history
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
-        if npub:
-            cursor.execute("""
-            SELECT id, npub, amount, bolt11, status, created_at, note_id 
-            FROM payments WHERE npub = ? ORDER BY created_at DESC
-            """, (npub,))
-        else:
-            cursor.execute("""
-            SELECT id, npub, amount, bolt11, status, created_at, note_id 
-            FROM payments ORDER BY created_at DESC
-            """)
+        conn = self.connection or sqlite3.connect(self.db_path)
+        try:
+            cursor = conn.cursor()
+            if not self.connection:
+                self._create_tables(conn)  # Ensure tables exist
             
-        rows = cursor.fetchall()
-        conn.close()
-        
-        return [
-            Payment(
-                id=row[0],
-                npub=row[1],
-                amount=row[2],
-                bolt11=row[3],
-                status=row[4],
-                created_at=datetime.fromisoformat(row[5]),
-                note_id=row[6]
-            )
-            for row in rows
-        ]
+            if npub:
+                cursor.execute("""
+                SELECT id, npub, amount, bolt11, status, created_at, note_id 
+                FROM payments WHERE npub = ? ORDER BY created_at DESC
+                """, (npub,))
+            else:
+                cursor.execute("""
+                SELECT id, npub, amount, bolt11, status, created_at, note_id 
+                FROM payments ORDER BY created_at DESC
+                """)
+                
+            rows = cursor.fetchall()
+            
+            return [
+                Payment(
+                    id=row[0],
+                    npub=row[1],
+                    amount=row[2],
+                    bolt11=row[3],
+                    status=row[4],
+                    created_at=datetime.fromisoformat(row[5]),
+                    note_id=row[6]
+                )
+                for row in rows
+            ]
+        finally:
+            if not self.connection:
+                conn.close()
